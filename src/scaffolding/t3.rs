@@ -16,19 +16,31 @@ pub async fn scaffold(project_path: &str) -> Result<()> {
     write_file(project_path, "biome.jsonc", BIOME_CONFIG)?;
     // Note: .env.example is written in finalize_package_json based on auth provider
 
+    // Write env validation
+    write_file(project_path, "src/env.js", ENV_JS)?;
+
     // Write source files
     write_file(project_path, "src/app/layout.tsx", APP_LAYOUT)?;
     write_file(project_path, "src/app/page.tsx", APP_PAGE)?;
     write_file(project_path, "src/styles/globals.css", GLOBALS_CSS)?;
 
-    // Write ThemeProvider component
+    // Write app components
     write_file(project_path, "src/app/_components/ThemeProvider.tsx", THEME_PROVIDER)?;
+    write_file(project_path, "src/app/_components/Header.tsx", HEADER_COMPONENT)?;
+    write_file(project_path, "src/app/_components/LanguageSwitcher.tsx", LANGUAGE_SWITCHER)?;
 
-    // Write tRPC setup
+    // Write dashboard page
+    write_file(project_path, "src/app/dashboard/page.tsx", DASHBOARD_PAGE)?;
+
+    // Write tRPC server setup
     write_file(project_path, "src/server/api/trpc.ts", TRPC_INIT)?;
     write_file(project_path, "src/server/api/root.ts", TRPC_ROOT)?;
     write_file(project_path, "src/app/api/trpc/[trpc]/route.ts", TRPC_ROUTE)?;
-    write_file(project_path, "src/lib/trpc.ts", TRPC_CLIENT)?;
+
+    // Write tRPC client setup
+    write_file(project_path, "src/trpc/react.tsx", TRPC_REACT)?;
+    write_file(project_path, "src/trpc/query-client.ts", TRPC_QUERY_CLIENT)?;
+    write_file(project_path, "src/trpc/server.ts", TRPC_SERVER)?;
 
     // Write Prisma schema and config
     write_file(project_path, "prisma/schema.prisma", PRISMA_SCHEMA)?;
@@ -138,12 +150,12 @@ pub fn finalize_package_json(
     // Add AI dependencies if enabled
     if include_ai {
         let deps = pkg["dependencies"].as_object_mut().unwrap();
-        deps.insert("@langchain/anthropic".to_string(), serde_json::json!("^0.3.11"));
-        deps.insert("@langchain/core".to_string(), serde_json::json!("^0.3.28"));
-        deps.insert("@langchain/openai".to_string(), serde_json::json!("^0.3.18"));
-        deps.insert("langchain".to_string(), serde_json::json!("^0.3.7"));
+        deps.insert("@langchain/anthropic".to_string(), serde_json::json!("^1.3.12"));
+        deps.insert("@langchain/core".to_string(), serde_json::json!("^1.1.17"));
+        deps.insert("@langchain/openai".to_string(), serde_json::json!("^1.2.3"));
+        deps.insert("langchain".to_string(), serde_json::json!("^0.3.20"));
         deps.insert("winston".to_string(), serde_json::json!("^3.17.0"));
-        deps.insert("pg".to_string(), serde_json::json!("^8.13.1"));
+        deps.insert("pg".to_string(), serde_json::json!("^8.16.0"));
     }
 
     // Add UI dependencies if enabled
@@ -281,6 +293,8 @@ const APP_LAYOUT: &str = r#"import "@/styles/globals.css";
 
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
+import { NextIntlClientProvider, useLocale } from "next-intl";
+import { TRPCReactProvider } from "@/trpc/react";
 import { ThemeProvider } from "./_components/ThemeProvider";
 
 export const metadata: Metadata = {
@@ -297,10 +311,15 @@ const geist = Geist({
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = useLocale();
   return (
-    <html lang="en" className={`${geist.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={`${geist.variable}`} suppressHydrationWarning>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider locale={locale}>
+            <TRPCReactProvider>{children}</TRPCReactProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
@@ -434,19 +453,6 @@ const handler = (req: NextRequest) =>
 export { handler as GET, handler as POST };
 "#;
 
-const TRPC_CLIENT: &str = r#"import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import type { AppRouter } from "@/server/api/root";
-import superjson from "superjson";
-
-export const trpc = createTRPCClient<AppRouter>({
-  links: [
-    httpBatchLink({
-      url: "/api/trpc",
-      transformer: superjson,
-    }),
-  ],
-});
-"#;
 
 const PRISMA_SCHEMA: &str = r#"generator client {
   provider = "prisma-client-js"
@@ -544,10 +550,32 @@ export const locales = ["de", "en"] as const;
 export type AppDictionary = typeof de;
 "#;
 
-const MESSAGES_EN: &str = r#"{}
+const MESSAGES_EN: &str = r#"{
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "tagline": "Your App Tagline"
+  },
+  "language": {
+    "switchLanguage": "Switch Language",
+    "german": "German",
+    "english": "English"
+  }
+}
 "#;
 
-const MESSAGES_DE: &str = r#"{}
+const MESSAGES_DE: &str = r#"{
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Einstellungen",
+    "tagline": "Ihr App-Slogan"
+  },
+  "language": {
+    "switchLanguage": "Sprache wechseln",
+    "german": "Deutsch",
+    "english": "Englisch"
+  }
+}
 "#;
 
 const BIOME_CONFIG: &str = r#"{
@@ -618,5 +646,486 @@ const BIOME_CONFIG: &str = r#"{
       "tailwindDirectives": true
     }
   }
+}
+"#;
+
+const ENV_JS: &str = r#"import { createEnv } from "@t3-oss/env-nextjs";
+import { z } from "zod";
+
+export const env = createEnv({
+  /**
+   * Specify your server-side environment variables schema here. This way you can ensure the app
+   * isn't built with invalid env vars.
+   */
+  server: {
+    DATABASE_URL: z.string().url(),
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
+  },
+
+  /**
+   * Specify your client-side environment variables schema here. This way you can ensure the app
+   * isn't built with invalid env vars. To expose them to the client, prefix them with
+   * `NEXT_PUBLIC_`.
+   */
+  client: {
+    // NEXT_PUBLIC_CLIENTVAR: z.string(),
+  },
+
+  /**
+   * You can't destruct `process.env` as a regular object in the Next.js edge runtimes (e.g.
+   * middlewares) or client-side so we need to destruct manually.
+   */
+  runtimeEnv: {
+    DATABASE_URL: process.env.DATABASE_URL,
+    NODE_ENV: process.env.NODE_ENV,
+  },
+  /**
+   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
+   * useful for Docker builds.
+   */
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+  /**
+   * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
+   * `SOME_VAR=''` will throw an error.
+   */
+  emptyStringAsUndefined: true,
+});
+"#;
+
+const TRPC_REACT: &str = r#""use client";
+
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
+import { httpBatchStreamLink, loggerLink } from "@trpc/client";
+import { createTRPCReact } from "@trpc/react-query";
+import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
+import { useState } from "react";
+import SuperJSON from "superjson";
+
+import { type AppRouter } from "@/server/api/root";
+import { createQueryClient } from "./query-client";
+
+let clientQueryClientSingleton: QueryClient | undefined = undefined;
+const getQueryClient = () => {
+  if (typeof window === "undefined") {
+    // Server: always make a new query client
+    return createQueryClient();
+  }
+  // Browser: use singleton pattern to keep the same query client
+  clientQueryClientSingleton ??= createQueryClient();
+
+  return clientQueryClientSingleton;
+};
+
+export const api = createTRPCReact<AppRouter>();
+
+/**
+ * Inference helper for inputs.
+ *
+ * @example type HelloInput = RouterInputs['example']['hello']
+ */
+export type RouterInputs = inferRouterInputs<AppRouter>;
+
+/**
+ * Inference helper for outputs.
+ *
+ * @example type HelloOutput = RouterOutputs['example']['hello']
+ */
+export type RouterOutputs = inferRouterOutputs<AppRouter>;
+
+export function TRPCReactProvider(props: { children: React.ReactNode }) {
+  const queryClient = getQueryClient();
+
+  const [trpcClient] = useState(() =>
+    api.createClient({
+      links: [
+        loggerLink({
+          enabled: (op) =>
+            process.env.NODE_ENV === "development" ||
+            (op.direction === "down" && op.result instanceof Error),
+        }),
+        httpBatchStreamLink({
+          transformer: SuperJSON,
+          url: getBaseUrl() + "/api/trpc",
+          headers: () => {
+            const headers = new Headers();
+            headers.set("x-trpc-source", "nextjs-react");
+            return headers;
+          },
+        }),
+      ],
+    })
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <api.Provider client={trpcClient} queryClient={queryClient}>
+        {props.children}
+      </api.Provider>
+    </QueryClientProvider>
+  );
+}
+
+function getBaseUrl() {
+  if (typeof window !== "undefined") return window.location.origin;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return `http://localhost:${process.env.PORT ?? 3000}`;
+}
+"#;
+
+const TRPC_QUERY_CLIENT: &str = r#"import {
+  defaultShouldDehydrateQuery,
+  QueryClient,
+} from "@tanstack/react-query";
+import SuperJSON from "superjson";
+
+export const createQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        // With SSR, we usually want to set some default staleTime
+        // above 0 to avoid refetching immediately on the client
+        staleTime: 30 * 1000,
+      },
+      dehydrate: {
+        serializeData: SuperJSON.serialize,
+        shouldDehydrateQuery: (query) =>
+          defaultShouldDehydrateQuery(query) ||
+          query.state.status === "pending",
+      },
+      hydrate: {
+        deserializeData: SuperJSON.deserialize,
+      },
+    },
+  });
+"#;
+
+const TRPC_SERVER: &str = r#"import "server-only";
+
+import { createHydrationHelpers } from "@trpc/react-query/rsc";
+import { headers } from "next/headers";
+import { cache } from "react";
+
+import { createCaller, type AppRouter } from "@/server/api/root";
+import { createTRPCContext } from "@/server/api/trpc";
+import { createQueryClient } from "./query-client";
+
+/**
+ * This wraps the `createTRPCContext` helper and provides the required context for the tRPC API when
+ * handling a tRPC call from a React Server Component.
+ */
+const createContext = cache(async () => {
+  const heads = new Headers(await headers());
+  heads.set("x-trpc-source", "rsc");
+
+  return createTRPCContext({
+    headers: heads,
+  });
+});
+
+const getQueryClient = cache(createQueryClient);
+const caller = createCaller(createContext);
+
+export const { trpc: api, HydrateClient } = createHydrationHelpers<AppRouter>(
+  caller,
+  getQueryClient
+);
+"#;
+
+const HEADER_COMPONENT: &str = r#""use client";
+
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "@/app/_components/LanguageSwitcher";
+
+export interface NavItem {
+  href: string;
+  labelKey: string;
+}
+
+export interface HeaderProps {
+  navItems?: NavItem[];
+}
+
+const defaultNavItems: NavItem[] = [
+  { href: "/dashboard", labelKey: "dashboard" },
+];
+
+export function Header({ navItems = defaultNavItems }: HeaderProps) {
+  const pathname = usePathname();
+  const t = useTranslations("nav");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  // Close menu on route change
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
+  return (
+    <header className="bg-card border-b border-border shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Left Side - Logo */}
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-primary rounded flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-primary-foreground"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <span className="text-xl font-bold text-primary group-hover:text-primary/80 transition-colors">
+                  My App
+                </span>
+                <span className="hidden sm:block text-xs text-muted-foreground">
+                  {t("tagline")}
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Right Side - Language Switcher & Menu */}
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+
+            {/* Hamburger Menu */}
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted cursor-pointer transition-colors"
+                aria-label="Menu"
+                aria-expanded={isMenuOpen}
+              >
+                {isMenuOpen ? (
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                )}
+              </button>
+
+              {/* Dropdown Menu */}
+              {isMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-card rounded-xl border border-border/50 shadow-lg py-2 z-50">
+                  {navItems.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`block px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                          isActive
+                            ? "text-primary bg-primary/5"
+                            : "text-muted-foreground hover:text-primary hover:bg-muted"
+                        }`}
+                      >
+                        {t(item.labelKey)}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export default Header;
+"#;
+
+const LANGUAGE_SWITCHER: &str = r#""use client";
+
+import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
+
+type Locale = "de" | "en";
+
+function setLocaleCookie(locale: Locale) {
+  document.cookie = `locale=${locale};path=/;max-age=31536000;SameSite=Lax`;
+}
+
+function getLocaleFromCookie(): Locale {
+  if (typeof document === "undefined") return "en";
+  const match = document.cookie.match(/locale=([^;]+)/);
+  return (match?.[1] as Locale) ?? "en";
+}
+
+export function LanguageSwitcher() {
+  const t = useTranslations("language");
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentLocale, setCurrentLocale] = useState<Locale>("en");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setCurrentLocale(getLocaleFromCookie());
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLocaleChange = (locale: Locale) => {
+    setLocaleCookie(locale);
+    setCurrentLocale(locale);
+    setIsOpen(false);
+    // Reload the page to apply the new locale
+    window.location.reload();
+  };
+
+  const localeLabels: Record<Locale, string> = {
+    de: t("german"),
+    en: t("english"),
+  };
+
+  const localeFlags: Record<Locale, string> = {
+    de: "DE",
+    en: "EN",
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-primary border border-border/50 rounded-lg hover:border-primary/50 transition-colors cursor-pointer"
+        aria-label={t("switchLanguage")}
+      >
+        <span className="font-semibold">{localeFlags[currentLocale]}</span>
+        <svg
+          className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-36 bg-card border border-border/50 rounded-xl shadow-lg z-50">
+          <ul className="py-1">
+            {(["de", "en"] as const).map((locale) => (
+              <li key={locale}>
+                <button
+                  onClick={() => handleLocaleChange(locale)}
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-muted cursor-pointer ${
+                    currentLocale === locale ? "text-primary font-medium" : "text-foreground"
+                  }`}
+                >
+                  <span className="font-semibold text-muted-foreground">{localeFlags[locale]}</span>
+                  {localeLabels[locale]}
+                  {currentLocale === locale && (
+                    <svg
+                      className="w-4 h-4 ml-auto text-primary"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default LanguageSwitcher;
+"#;
+
+const DASHBOARD_PAGE: &str = r#""use client";
+
+import { Header } from "@/app/_components/Header";
+
+export default function DashboardPage() {
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
+
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Welcome to your dashboard. Start building something amazing!
+        </p>
+      </main>
+    </div>
+  );
 }
 "#;
