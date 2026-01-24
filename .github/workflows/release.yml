@@ -48,7 +48,6 @@ jobs:
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
-        working-directory: t3-mono
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
@@ -56,14 +55,12 @@ jobs:
           mkdir -p dist
           cp target/${{ matrix.target }}/release/t3-mono dist/
           chmod +x dist/t3-mono
-        working-directory: t3-mono
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
         run: |
           mkdir dist
           copy target\${{ matrix.target }}\release\t3-mono.exe dist\
-        working-directory: t3-mono
 
       - name: Create npm package
         run: |
@@ -81,13 +78,12 @@ jobs:
             }
           }
           EOF
-        working-directory: t3-mono
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.npm_pkg }}
-          path: t3-mono/npm-pkg/
+          path: npm-pkg/
 
   publish:
     needs: build
@@ -117,7 +113,7 @@ jobs:
 
       - name: Update main package version
         run: |
-          cd t3-mono/npm
+          cd npm
           VERSION=${{ github.ref_name }}
           VERSION=${VERSION#v}
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
@@ -127,7 +123,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          cd t3-mono/npm
+          cd npm
           npm publish --access public
 
   github-release:
