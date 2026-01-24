@@ -76,6 +76,10 @@ jobs:
             "name": "@t3-mono/${{ matrix.npm_pkg }}",
             "version": "${VERSION}",
             "description": "t3-mono binary for ${{ matrix.npm_pkg }}",
+            "repository": {
+              "type": "git",
+              "url": "git+https://github.com/elijahross/t3-mono.git"
+            },
             "os": ["${{ contains(matrix.npm_pkg, 'darwin') && 'darwin' || 'linux' }}"],
             "cpu": ["${{ contains(matrix.npm_pkg, 'arm64') && 'arm64' || 'x64' }}"],
             "bin": {
@@ -95,6 +99,10 @@ jobs:
             name = "@t3-mono/${{ matrix.npm_pkg }}"
             version = $version
             description = "t3-mono binary for ${{ matrix.npm_pkg }}"
+            repository = @{
+              type = "git"
+              url = "git+https://github.com/elijahross/t3-mono.git"
+            }
             os = @("win32")
             cpu = @("x64")
             bin = @{ "t3-mono" = "t3-mono.exe" }
