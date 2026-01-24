@@ -7,25 +7,34 @@ Update these periodically to keep generated projects current.
 
 | Package | Current | Latest | Check |
 |---------|---------|--------|-------|
-| next | ^15.1.0 | [npm](https://www.npmjs.com/package/next) | `npm view next version` |
+| next | ^16.1.1 | [npm](https://www.npmjs.com/package/next) | `npm view next version` |
 | react | ^19.0.0 | [npm](https://www.npmjs.com/package/react) | `npm view react version` |
-| typescript | ^5.7.2 | [npm](https://www.npmjs.com/package/typescript) | `npm view typescript version` |
-| tailwindcss | ^4.0.0 | [npm](https://www.npmjs.com/package/tailwindcss) | `npm view tailwindcss version` |
+| typescript | ^5.8.2 | [npm](https://www.npmjs.com/package/typescript) | `npm view typescript version` |
+| tailwindcss | ^4.0.15 | [npm](https://www.npmjs.com/package/tailwindcss) | `npm view tailwindcss version` |
 
 ## Database & Auth
 
 | Package | Current | Latest | Check |
 |---------|---------|--------|-------|
-| @prisma/client | ^6.1.0 | [npm](https://www.npmjs.com/package/@prisma/client) | `npm view @prisma/client version` |
-| better-auth | ^1.1.10 | [npm](https://www.npmjs.com/package/better-auth) | `npm view better-auth version` |
+| @prisma/client | ^7.2.0 | [npm](https://www.npmjs.com/package/@prisma/client) | `npm view @prisma/client version` |
+| next-auth | 4.24.13 | [npm](https://www.npmjs.com/package/next-auth) | `npm view next-auth version` |
+| @auth/prisma-adapter | ^2.7.2 | [npm](https://www.npmjs.com/package/@auth/prisma-adapter) | `npm view @auth/prisma-adapter version` |
 
 ## tRPC
 
 | Package | Current | Latest | Check |
 |---------|---------|--------|-------|
-| @trpc/server | ^11.0.0-rc.682 | [npm](https://www.npmjs.com/package/@trpc/server) | `npm view @trpc/server version` |
-| @trpc/client | ^11.0.0-rc.682 | [npm](https://www.npmjs.com/package/@trpc/client) | `npm view @trpc/client version` |
-| @tanstack/react-query | ^5.62.8 | [npm](https://www.npmjs.com/package/@tanstack/react-query) | `npm view @tanstack/react-query version` |
+| @trpc/server | ^11.0.0 | [npm](https://www.npmjs.com/package/@trpc/server) | `npm view @trpc/server version` |
+| @trpc/client | ^11.0.0 | [npm](https://www.npmjs.com/package/@trpc/client) | `npm view @trpc/client version` |
+| @tanstack/react-query | ^5.69.0 | [npm](https://www.npmjs.com/package/@tanstack/react-query) | `npm view @tanstack/react-query version` |
+| @t3-oss/env-nextjs | ^0.13.10 | [npm](https://www.npmjs.com/package/@t3-oss/env-nextjs) | `npm view @t3-oss/env-nextjs version` |
+
+## Testing
+
+| Package | Current | Latest | Check |
+|---------|---------|--------|-------|
+| vitest | 4.0.17 | [npm](https://www.npmjs.com/package/vitest) | `npm view vitest version` |
+| @testing-library/react | ^16.3.0 | [npm](https://www.npmjs.com/package/@testing-library/react) | `npm view @testing-library/react version` |
 
 ## AI Extension
 
@@ -63,12 +72,17 @@ npm view next version && \
 npm view react version && \
 npm view typescript version && \
 npm view tailwindcss version && \
-echo "=== Database ===" && \
+echo "=== Database & Auth ===" && \
 npm view @prisma/client version && \
-npm view better-auth version && \
+npm view next-auth version && \
+npm view @auth/prisma-adapter version && \
 echo "=== tRPC ===" && \
 npm view @trpc/server version && \
 npm view @tanstack/react-query version && \
+npm view @t3-oss/env-nextjs version && \
+echo "=== Testing ===" && \
+npm view vitest version && \
+npm view @testing-library/react version && \
 echo "=== AI ===" && \
 npm view @langchain/core version && \
 npm view langchain version && \

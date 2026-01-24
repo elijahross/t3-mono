@@ -81,9 +81,9 @@ fn update_package_json_ai() -> Result<()> {
         ("@langchain/core", "^0.3.28"),
         ("@langchain/openai", "^0.3.18"),
         ("langchain", "^0.3.7"),
-        ("zod", "^3.24.1"),
+        ("zod", "^4.3.5"),
         ("winston", "^3.17.0"),
-        ("pg", "^8.13.1"),
+        ("pg", "^8.16.0"),
     ];
 
     for (name, version) in ai_deps {

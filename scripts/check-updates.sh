@@ -26,20 +26,28 @@ check_version() {
 }
 
 echo "📦 Core Stack"
-check_version "next" "15.1.0"
+check_version "next" "16.1.1"
 check_version "react" "19.0.0"
-check_version "typescript" "5.7.2"
-check_version "tailwindcss" "4.0.0"
+check_version "typescript" "5.8.2"
+check_version "tailwindcss" "4.0.15"
 
 echo ""
 echo "🗄️  Database & Auth"
-check_version "@prisma/client" "6.1.0"
-check_version "better-auth" "1.1.10"
+check_version "@prisma/client" "7.2.0"
+check_version "next-auth" "4.24.13"
+check_version "@auth/prisma-adapter" "2.7.2"
 
 echo ""
 echo "🔌 tRPC"
-check_version "@trpc/server" "11.0.0-rc.682"
-check_version "@tanstack/react-query" "5.62.8"
+check_version "@trpc/server" "11.0.0"
+check_version "@trpc/client" "11.0.0"
+check_version "@tanstack/react-query" "5.69.0"
+check_version "@t3-oss/env-nextjs" "0.13.10"
+
+echo ""
+echo "🧪 Testing"
+check_version "vitest" "4.0.17"
+check_version "@testing-library/react" "16.3.0"
 
 echo ""
 echo "🤖 AI Extension"

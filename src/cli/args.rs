@@ -1,17 +1,29 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
-/// CLI tool to scaffold T3 stack apps with Better Auth and optional extensions
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
+pub enum AuthProvider {
+    #[default]
+    #[value(name = "better-auth")]
+    BetterAuth,
+    #[value(name = "next-auth")]
+    NextAuth,
+}
+
+/// CLI tool to scaffold T3 stack apps with authentication and optional extensions
 #[derive(Parser, Debug)]
 #[command(name = "t3-mono")]
 #[command(author = "Elijah Ross")]
 #[command(version)]
-#[command(about = "Scaffold T3 stack apps with Better Auth, optional AI agents, UI components, and Restate workflows")]
+#[command(about = "Scaffold T3 stack apps with authentication (Better Auth or NextAuth), optional AI agents, UI components, and Restate workflows")]
 #[command(long_about = r#"
-Create a new T3 stack monorepo with Better Auth pre-configured.
+Create a new T3 stack monorepo with authentication pre-configured.
 
 Examples:
-  # Basic usage
+  # Basic usage (uses Better Auth by default)
   npx t3-mono my-app
+
+  # With NextAuth instead
+  npx t3-mono my-app --auth=next-auth
 
   # With AI agents (LangChain)
   npx t3-mono my-app --ai
@@ -24,6 +36,9 @@ Examples:
 
   # With all extensions
   npx t3-mono my-app --ai --ui --restate
+
+  # Interactive mode (prompts for auth and extensions)
+  npx t3-mono my-app -i
 
   # Add to existing project
   npx t3-mono add ai
@@ -54,6 +69,10 @@ pub struct Args {
     /// Skip git initialization
     #[arg(long)]
     pub no_git: bool,
+
+    /// Authentication provider (better-auth or next-auth)
+    #[arg(long, value_enum, default_value_t = AuthProvider::BetterAuth)]
+    pub auth: AuthProvider,
 
     #[command(subcommand)]
     pub command: Option<Command>,

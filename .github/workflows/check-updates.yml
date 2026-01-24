@@ -42,17 +42,33 @@ jobs:
           echo "|---------|---------|--------|--------|" >> update-report.md
 
           # Core
-          check_pkg "next" "15.1.0"
+          check_pkg "next" "16.1.1"
           check_pkg "react" "19.0.0"
-          check_pkg "typescript" "5.7.2"
-          check_pkg "@prisma/client" "6.1.0"
-          check_pkg "better-auth" "1.1.10"
-          check_pkg "@trpc/server" "11.0.0-rc.682"
-          check_pkg "@tanstack/react-query" "5.62.8"
+          check_pkg "typescript" "5.8.2"
+          check_pkg "tailwindcss" "4.0.15"
+
+          # Database & Auth
+          check_pkg "@prisma/client" "7.2.0"
+          check_pkg "next-auth" "4.24.13"
+          check_pkg "@auth/prisma-adapter" "2.7.2"
+
+          # tRPC
+          check_pkg "@trpc/server" "11.0.0"
+          check_pkg "@tanstack/react-query" "5.69.0"
+          check_pkg "@t3-oss/env-nextjs" "0.13.10"
+
+          # Testing
+          check_pkg "vitest" "4.0.17"
+          check_pkg "@testing-library/react" "16.3.0"
 
           # AI
           check_pkg "@langchain/core" "0.3.28"
           check_pkg "langchain" "0.3.7"
+
+          # UI
+          check_pkg "lucide-react" "0.562.0"
+          check_pkg "recharts" "2.15.4"
+          check_pkg "sonner" "2.0.7"
 
           # Restate
           check_pkg "@restatedev/restate-sdk" "1.9.1"

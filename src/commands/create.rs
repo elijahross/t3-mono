@@ -1,11 +1,12 @@
 use anyhow::Result;
 use console::style;
-use dialoguer::MultiSelect;
+use dialoguer::{MultiSelect, Select};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;
 use std::time::Duration;
 
-use crate::scaffolding::{ai, better_auth, restate, t3, ui};
+use crate::cli::AuthProvider;
+use crate::scaffolding::{ai, better_auth, next_auth, restate, t3, ui};
 use crate::utils::fs;
 
 pub async fn execute(
@@ -15,11 +16,14 @@ pub async fn execute(
     include_restate: bool,
     interactive: bool,
     init_git: bool,
+    auth_provider: AuthProvider,
 ) -> Result<()> {
-    let (ai_enabled, ui_enabled, restate_enabled) = if interactive {
-        prompt_extensions(include_ai, include_ui, include_restate)?
+    let (selected_auth, ai_enabled, ui_enabled, restate_enabled) = if interactive {
+        let auth = prompt_auth_provider(auth_provider)?;
+        let (ai, ui, restate) = prompt_extensions(include_ai, include_ui, include_restate)?;
+        (auth, ai, ui, restate)
     } else {
-        (include_ai, include_ui, include_restate)
+        (auth_provider, include_ai, include_ui, include_restate)
     };
 
     let project_path = Path::new(name);
@@ -32,12 +36,17 @@ pub async fn execute(
         }
     }
 
+    let auth_name = match selected_auth {
+        AuthProvider::BetterAuth => "Better Auth",
+        AuthProvider::NextAuth => "NextAuth",
+    };
+
     println!();
     println!(
         "  {} {} {}",
         style("Creating").cyan().bold(),
         style(name).white().bold(),
-        style("with T3 Stack + Better Auth").dim()
+        style(format!("with T3 Stack + {}", auth_name)).dim()
     );
 
     if ai_enabled {
@@ -56,7 +65,7 @@ pub async fn execute(
 
     // Step 1: Create directory structure
     pb.set_message("Creating project structure...");
-    fs::create_project_dir(name)?;
+    fs::create_project_dir(name, selected_auth)?;
     pb.inc(1);
 
     // Step 2: Scaffold T3 base
@@ -64,9 +73,17 @@ pub async fn execute(
     t3::scaffold(name).await?;
     pb.inc(1);
 
-    // Step 3: Add Better Auth
-    pb.set_message("Configuring Better Auth...");
-    better_auth::scaffold(name).await?;
+    // Step 3: Add authentication
+    match selected_auth {
+        AuthProvider::BetterAuth => {
+            pb.set_message("Configuring Better Auth...");
+            better_auth::scaffold(name).await?;
+        }
+        AuthProvider::NextAuth => {
+            pb.set_message("Configuring NextAuth...");
+            next_auth::scaffold(name).await?;
+        }
+    }
     pb.inc(1);
 
     // Step 4: Add AI if enabled
@@ -99,7 +116,7 @@ pub async fn execute(
 
     // Step 8: Final package.json assembly
     pb.set_message("Finalizing package.json...");
-    t3::finalize_package_json(name, ai_enabled, ui_enabled)?;
+    t3::finalize_package_json(name, ai_enabled, ui_enabled, selected_auth)?;
     pb.inc(1);
 
     pb.finish_and_clear();
@@ -108,6 +125,30 @@ pub async fn execute(
     print_success(name, ai_enabled, ui_enabled, restate_enabled);
 
     Ok(())
+}
+
+fn prompt_auth_provider(default: AuthProvider) -> Result<AuthProvider> {
+    let auth_options = vec![
+        "Better Auth (recommended)",
+        "NextAuth (v4)",
+    ];
+
+    let default_index = match default {
+        AuthProvider::BetterAuth => 0,
+        AuthProvider::NextAuth => 1,
+    };
+
+    let selection = Select::new()
+        .with_prompt("Select authentication provider")
+        .items(&auth_options)
+        .default(default_index)
+        .interact()?;
+
+    Ok(match selection {
+        0 => AuthProvider::BetterAuth,
+        1 => AuthProvider::NextAuth,
+        _ => AuthProvider::BetterAuth,
+    })
 }
 
 fn prompt_extensions(default_ai: bool, default_ui: bool, default_restate: bool) -> Result<(bool, bool, bool)> {

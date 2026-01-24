@@ -34,6 +34,7 @@ async fn run(args: Args) -> Result<()> {
                 args.restate,
                 args.interactive,
                 !args.no_git,
+                args.auth,
             )
             .await?;
         }

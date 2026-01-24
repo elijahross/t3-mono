@@ -1,4 +1,5 @@
 use anyhow::Result;
+use crate::cli::AuthProvider;
 use crate::utils::fs::write_file;
 
 /// Scaffold the T3 stack base project
@@ -8,7 +9,7 @@ pub async fn scaffold(project_path: &str) -> Result<()> {
     write_file(project_path, "next.config.ts", NEXT_CONFIG)?;
     write_file(project_path, "tailwind.config.ts", TAILWIND_CONFIG)?;
     write_file(project_path, "postcss.config.js", POSTCSS_CONFIG)?;
-    write_file(project_path, ".env.example", ENV_EXAMPLE)?;
+    // Note: .env.example is written in finalize_package_json based on auth provider
 
     // Write source files
     write_file(project_path, "src/app/layout.tsx", APP_LAYOUT)?;
@@ -34,7 +35,12 @@ pub async fn scaffold(project_path: &str) -> Result<()> {
 }
 
 /// Finalize package.json with all dependencies
-pub fn finalize_package_json(project_path: &str, include_ai: bool, include_ui: bool) -> Result<()> {
+pub fn finalize_package_json(
+    project_path: &str,
+    include_ai: bool,
+    include_ui: bool,
+    auth_provider: AuthProvider,
+) -> Result<()> {
     let mut pkg = serde_json::json!({
         "name": project_path.replace("/", "-").replace(".", "my-app"),
         "version": "0.1.0",
@@ -47,35 +53,62 @@ pub fn finalize_package_json(project_path: &str, include_ai: bool, include_ui: b
             "lint": "next lint",
             "db:push": "prisma db push",
             "db:studio": "prisma studio",
-            "db:generate": "prisma generate"
+            "db:generate": "prisma generate",
+            "test": "vitest",
+            "format": "prettier --write ."
         },
         "dependencies": {
-            "next": "^15.1.0",
+            "next": "^16.1.1",
             "react": "^19.0.0",
             "react-dom": "^19.0.0",
-            "@prisma/client": "^6.1.0",
-            "@trpc/client": "^11.0.0-rc.682",
-            "@trpc/server": "^11.0.0-rc.682",
-            "@trpc/react-query": "^11.0.0-rc.682",
-            "@trpc/next": "^11.0.0-rc.682",
-            "@tanstack/react-query": "^5.62.8",
-            "better-auth": "^1.1.10",
-            "superjson": "^2.2.2",
-            "zod": "^3.24.1"
+            "@prisma/client": "^7.2.0",
+            "@prisma/adapter-pg": "^7.2.0",
+            "@trpc/client": "^11.0.0",
+            "@trpc/server": "^11.0.0",
+            "@trpc/react-query": "^11.0.0",
+            "@tanstack/react-query": "^5.69.0",
+            "@t3-oss/env-nextjs": "^0.13.10",
+            "next-themes": "^0.4.6",
+            "superjson": "^2.2.1",
+            "zod": "^4.3.5",
+            "server-only": "^0.0.1",
+            "lucide-react": "^0.562.0"
         },
         "devDependencies": {
-            "typescript": "^5.7.2",
-            "@types/node": "^22.10.2",
-            "@types/react": "^19.0.2",
-            "@types/react-dom": "^19.0.2",
-            "prisma": "^6.1.0",
-            "tailwindcss": "^4.0.0",
-            "@tailwindcss/postcss": "^4.0.0",
-            "postcss": "^8.4.49",
-            "eslint": "^9.17.0",
-            "eslint-config-next": "^15.1.0"
+            "typescript": "^5.8.2",
+            "@types/node": "^25.0.8",
+            "@types/react": "^19.0.0",
+            "@types/react-dom": "^19.0.0",
+            "prisma": "^7.2.0",
+            "tailwindcss": "^4.0.15",
+            "@tailwindcss/postcss": "^4.0.15",
+            "postcss": "^8.5.3",
+            "eslint": "^9.23.0",
+            "eslint-config-next": "^16.1.1",
+            "@eslint/eslintrc": "^3.3.1",
+            "typescript-eslint": "^8.27.0",
+            "prettier": "^3.5.3",
+            "prettier-plugin-tailwindcss": "^0.7.2",
+            "vitest": "4.0.17",
+            "@vitejs/plugin-react": "5.1.2",
+            "@testing-library/react": "^16.3.0",
+            "@testing-library/dom": "^10.4.0",
+            "@testing-library/jest-dom": "^6.6.3",
+            "jsdom": "27.4.0"
         }
     });
+
+    // Add auth-specific dependencies
+    let deps = pkg["dependencies"].as_object_mut().unwrap();
+    match auth_provider {
+        AuthProvider::BetterAuth => {
+            deps.insert("better-auth".to_string(), serde_json::json!("^1.0.0"));
+        }
+        AuthProvider::NextAuth => {
+            deps.insert("next-auth".to_string(), serde_json::json!("4.24.13"));
+            deps.insert("@auth/prisma-adapter".to_string(), serde_json::json!("^2.7.2"));
+        }
+    }
 
     // Add AI dependencies if enabled
     if include_ai {
@@ -105,6 +138,13 @@ pub fn finalize_package_json(project_path: &str, include_ai: bool, include_ui: b
 
     let content = serde_json::to_string_pretty(&pkg)?;
     write_file(project_path, "package.json", &content)?;
+
+    // Write .env.example with auth-specific variables
+    let env_content = match auth_provider {
+        AuthProvider::BetterAuth => ENV_EXAMPLE_BETTER_AUTH,
+        AuthProvider::NextAuth => ENV_EXAMPLE_NEXT_AUTH,
+    };
+    write_file(project_path, ".env.example", env_content)?;
 
     Ok(())
 }
@@ -172,12 +212,31 @@ const POSTCSS_CONFIG: &str = r#"export default {
 };
 "#;
 
-const ENV_EXAMPLE: &str = r#"# Database
+const ENV_EXAMPLE_BETTER_AUTH: &str = r#"# Database
 DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
 
 # Better Auth
 BETTER_AUTH_SECRET="your-secret-key-min-32-chars-here"
 BETTER_AUTH_URL="http://localhost:3000"
+
+# AI (optional, if using --ai flag)
+OPENAI_API_KEY=""
+ANTHROPIC_API_KEY=""
+
+# App
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+"#;
+
+const ENV_EXAMPLE_NEXT_AUTH: &str = r#"# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
+
+# NextAuth
+NEXTAUTH_SECRET="your-secret-key-min-32-chars-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# OAuth Providers (optional)
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
 
 # AI (optional, if using --ai flag)
 OPENAI_API_KEY=""
@@ -305,8 +364,6 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// Better Auth models - see better_auth.rs for additional models
 "#;
 
 const DB_CLIENT: &str = r#"import { PrismaClient } from "@prisma/client";

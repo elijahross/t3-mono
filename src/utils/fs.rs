@@ -3,8 +3,10 @@ use git2::Repository;
 use std::fs;
 use std::path::Path;
 
+use crate::cli::AuthProvider;
+
 /// Create the project directory structure
-pub fn create_project_dir(name: &str) -> Result<()> {
+pub fn create_project_dir(name: &str, auth_provider: AuthProvider) -> Result<()> {
     let project_path = Path::new(name);
 
     if name != "." {
@@ -12,10 +14,16 @@ pub fn create_project_dir(name: &str) -> Result<()> {
             .with_context(|| format!("Failed to create directory: {}", name))?;
     }
 
+    // Determine auth route directory based on provider
+    let auth_route_dir = match auth_provider {
+        AuthProvider::BetterAuth => "src/app/api/auth/[...all]",
+        AuthProvider::NextAuth => "src/app/api/auth/[...nextauth]",
+    };
+
     // Create standard directories
     let dirs = [
         "src/app/api/trpc/[trpc]",
-        "src/app/api/auth/[...all]",
+        auth_route_dir,
         "src/server/api",
         "src/lib",
         "src/components",
