@@ -63,22 +63,39 @@ jobs:
           mkdir dist
           copy target\${{ matrix.target }}\release\t3-mono.exe dist\
 
-      - name: Create npm package
+      - name: Create npm package (Unix)
+        if: runner.os != 'Windows'
         run: |
           mkdir -p npm-pkg
-          cp dist/t3-mono* npm-pkg/
+          cp dist/t3-mono npm-pkg/
           cat > npm-pkg/package.json << 'EOF'
           {
             "name": "@t3-mono/${{ matrix.npm_pkg }}",
             "version": "${{ github.ref_name }}",
             "description": "t3-mono binary for ${{ matrix.npm_pkg }}",
-            "os": ["${{ contains(matrix.npm_pkg, 'darwin') && 'darwin' || contains(matrix.npm_pkg, 'linux') && 'linux' || 'win32' }}"],
+            "os": ["${{ contains(matrix.npm_pkg, 'darwin') && 'darwin' || 'linux' }}"],
             "cpu": ["${{ contains(matrix.npm_pkg, 'arm64') && 'arm64' || 'x64' }}"],
             "bin": {
-              "t3-mono": "${{ runner.os == 'Windows' && 't3-mono.exe' || 't3-mono' }}"
+              "t3-mono": "t3-mono"
             }
           }
           EOF
+
+      - name: Create npm package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path npm-pkg
+          Copy-Item dist\t3-mono.exe npm-pkg\
+          $json = @{
+            name = "@t3-mono/${{ matrix.npm_pkg }}"
+            version = "${{ github.ref_name }}"
+            description = "t3-mono binary for ${{ matrix.npm_pkg }}"
+            os = @("win32")
+            cpu = @("x64")
+            bin = @{ "t3-mono" = "t3-mono.exe" }
+          } | ConvertTo-Json -Depth 3
+          $json | Out-File -FilePath npm-pkg\package.json -Encoding utf8
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
