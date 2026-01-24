@@ -205,7 +205,7 @@ fn print_success(name: &str, ai_enabled: bool, ui_enabled: bool, restate_enabled
     if ai_enabled || ui_enabled || restate_enabled {
         println!("  Included extensions:");
         if ai_enabled {
-            println!("    {} AI agents in {}", style("•").dim(), style("src/ai/").yellow());
+            println!("    {} AI agents in {}", style("•").dim(), style("src/components/ai/").yellow());
         }
         if ui_enabled {
             println!("    {} UI components in {}", style("•").dim(), style("src/components/ui/").yellow());

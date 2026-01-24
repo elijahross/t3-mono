@@ -8,15 +8,15 @@ use crate::utils::fs::write_file;
 pub async fn scaffold(project_path: &str) -> Result<()> {
     let project = Path::new(project_path);
 
-    // Create AI directory structure
-    let ai_path = project.join("src/ai/core");
+    // Create AI directory structure at src/components/ai/core
+    let ai_path = project.join("src/components/ai/core");
     tokio::fs::create_dir_all(&ai_path).await?;
 
     // Copy embedded AI templates
     embedded::copy_embedded_dir("ai/core", &ai_path).await?;
 
     // Create AI index file
-    write_file(project_path, "src/ai/index.ts", AI_INDEX)?;
+    write_file(project_path, "src/components/ai/index.ts", AI_INDEX)?;
 
     // Create Claude skill file
     let claude_dir = project.join(".claude/skills");
@@ -24,8 +24,8 @@ pub async fn scaffold(project_path: &str) -> Result<()> {
     write_file(project_path, ".claude/skills/ai.md", CLAUDE_AI_SKILL)?;
 
     // Create example agent file
-    tokio::fs::create_dir_all(project.join("src/ai/agents")).await?;
-    write_file(project_path, "src/ai/agents/example.ts", EXAMPLE_AGENT)?;
+    tokio::fs::create_dir_all(project.join("src/components/ai/agents")).await?;
+    write_file(project_path, "src/components/ai/agents/example.ts", EXAMPLE_AGENT)?;
 
     Ok(())
 }
@@ -35,10 +35,10 @@ pub async fn scaffold(project_path: &str) -> Result<()> {
 // ============================================================================
 
 const AI_INDEX: &str = r#"// AI Framework - Re-exports from core modules
-export * from "./core/providers";
-export * from "./core/logging";
-export * from "./core/chunking";
-export * from "./core/embedding";
+export * from "@/components/ai/core/providers";
+export * from "@/components/ai/core/logging";
+export * from "@/components/ai/core/chunking";
+export * from "@/components/ai/core/embedding";
 "#;
 
 const CLAUDE_AI_SKILL: &str = r#"# AI Agents Skill
@@ -47,28 +47,28 @@ This project includes a LangChain-based AI agents framework.
 
 ## Available Modules
 
-### Providers (`src/ai/core/providers`)
+### Providers (`src/components/ai/core/providers`)
 - Unified interface for Anthropic, OpenAI, Google, Mistral, Ollama
 - Model registry with cost estimation
 - Fallback chains for reliability
 
-### Logging (`src/ai/core/logging`)
+### Logging (`src/components/ai/core/logging`)
 - LLM call logging to terminal, database, or file
 - Token counting and cost tracking
 - Usage statistics
 
-### Chunking (`src/ai/core/chunking`)
+### Chunking (`src/components/ai/core/chunking`)
 - Text chunking strategies: character, token, semantic, recursive, markdown
 - Presets for different use cases
 
-### Embedding (`src/ai/core/embedding`)
+### Embedding (`src/components/ai/core/embedding`)
 - Multi-provider embedding generation
 - Batch processing and semantic search
 
 ## Usage
 
 ```typescript
-import { createLLM, LLMLogger, TextChunker, EmbeddingGenerator } from "@/ai";
+import { createLLM, LLMLogger, TextChunker, EmbeddingGenerator } from "@/components/ai";
 
 // Create LLM instance
 const llm = createLLM({
@@ -98,8 +98,8 @@ Required for AI features:
 - `OPENAI_API_KEY` - For GPT models and embeddings
 "#;
 
-const EXAMPLE_AGENT: &str = r#"import { createLLM, ModelRegistry } from "@/ai/core/providers";
-import { LLMLogger } from "@/ai/core/logging";
+const EXAMPLE_AGENT: &str = r#"import { createLLM, ModelRegistry } from "@/components/ai/core/providers";
+import { LLMLogger } from "@/components/ai/core/logging";
 
 // Initialize logging (optional)
 if (process.env.LLMLOG) {

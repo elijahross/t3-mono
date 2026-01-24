@@ -1,20 +1,28 @@
 use anyhow::Result;
+use std::path::Path;
 use crate::cli::AuthProvider;
+use crate::templates::embedded;
 use crate::utils::fs::write_file;
 
 /// Scaffold the T3 stack base project
 pub async fn scaffold(project_path: &str) -> Result<()> {
+    let project = Path::new(project_path);
+
     // Write configuration files
     write_file(project_path, "tsconfig.json", TSCONFIG)?;
-    write_file(project_path, "next.config.ts", NEXT_CONFIG)?;
+    write_file(project_path, "next.config.js", NEXT_CONFIG)?;
     write_file(project_path, "tailwind.config.ts", TAILWIND_CONFIG)?;
     write_file(project_path, "postcss.config.js", POSTCSS_CONFIG)?;
+    write_file(project_path, "biome.jsonc", BIOME_CONFIG)?;
     // Note: .env.example is written in finalize_package_json based on auth provider
 
     // Write source files
     write_file(project_path, "src/app/layout.tsx", APP_LAYOUT)?;
     write_file(project_path, "src/app/page.tsx", APP_PAGE)?;
-    write_file(project_path, "src/app/globals.css", GLOBALS_CSS)?;
+    write_file(project_path, "src/styles/globals.css", GLOBALS_CSS)?;
+
+    // Write ThemeProvider component
+    write_file(project_path, "src/app/_components/ThemeProvider.tsx", THEME_PROVIDER)?;
 
     // Write tRPC setup
     write_file(project_path, "src/server/api/trpc.ts", TRPC_INIT)?;
@@ -22,14 +30,30 @@ pub async fn scaffold(project_path: &str) -> Result<()> {
     write_file(project_path, "src/app/api/trpc/[trpc]/route.ts", TRPC_ROUTE)?;
     write_file(project_path, "src/lib/trpc.ts", TRPC_CLIENT)?;
 
-    // Write Prisma schema
+    // Write Prisma schema and config
     write_file(project_path, "prisma/schema.prisma", PRISMA_SCHEMA)?;
+    write_file(project_path, "prisma.config.ts", PRISMA_CONFIG)?;
 
     // Write database client
     write_file(project_path, "src/server/db.ts", DB_CLIENT)?;
 
     // Write utility functions
     write_file(project_path, "src/lib/utils.ts", UTILS)?;
+
+    // Write i18n setup
+    write_file(project_path, "src/i18n/request.ts", I18N_REQUEST)?;
+    write_file(project_path, "src/types/dictionary.ts", DICTIONARY_TYPES)?;
+    write_file(project_path, "messages/en.json", MESSAGES_EN)?;
+    write_file(project_path, "messages/de.json", MESSAGES_DE)?;
+
+    // Copy Docker templates
+    let docker_dest = project.join("");
+    embedded::copy_embedded_dir("docker", &docker_dest).await?;
+
+    // Copy documentation templates
+    let docs_dest = project.join("docs");
+    tokio::fs::create_dir_all(&docs_dest).await?;
+    embedded::copy_embedded_dir("docs", &docs_dest).await?;
 
     Ok(())
 }
@@ -50,45 +74,46 @@ pub fn finalize_package_json(
             "dev": "next dev --turbopack",
             "build": "next build",
             "start": "next start",
-            "lint": "next lint",
+            "lint": "biome lint .",
+            "format": "biome format --write .",
+            "check": "biome check --write .",
             "db:push": "prisma db push",
             "db:studio": "prisma studio",
             "db:generate": "prisma generate",
-            "test": "vitest",
-            "format": "prettier --write ."
+            "db:migrate": "prisma migrate dev",
+            "test": "vitest"
         },
         "dependencies": {
-            "next": "^16.1.1",
-            "react": "^19.0.0",
-            "react-dom": "^19.0.0",
-            "@prisma/client": "^7.2.0",
-            "@prisma/adapter-pg": "^7.2.0",
-            "@trpc/client": "^11.0.0",
-            "@trpc/server": "^11.0.0",
-            "@trpc/react-query": "^11.0.0",
-            "@tanstack/react-query": "^5.69.0",
+            "next": "^16.1.4",
+            "react": "^19.2.3",
+            "react-dom": "^19.2.3",
+            "@prisma/client": "^7.3.0",
+            "@prisma/adapter-pg": "^7.3.0",
+            "@trpc/client": "^11.8.1",
+            "@trpc/server": "^11.8.1",
+            "@trpc/react-query": "^11.8.1",
+            "@tanstack/react-query": "^5.90.20",
             "@t3-oss/env-nextjs": "^0.13.10",
             "next-themes": "^0.4.6",
+            "next-intl": "^4.7.0",
             "superjson": "^2.2.1",
-            "zod": "^4.3.5",
+            "zod": "^4.3.6",
             "server-only": "^0.0.1",
-            "lucide-react": "^0.562.0"
+            "lucide-react": "^0.563.0",
+            "clsx": "^2.1.1",
+            "tailwind-merge": "^3.4.0"
         },
         "devDependencies": {
-            "typescript": "^5.8.2",
-            "@types/node": "^25.0.8",
-            "@types/react": "^19.0.0",
-            "@types/react-dom": "^19.0.0",
-            "prisma": "^7.2.0",
-            "tailwindcss": "^4.0.15",
-            "@tailwindcss/postcss": "^4.0.15",
+            "typescript": "^5.9.3",
+            "@types/node": "^25.0.10",
+            "@types/react": "^19.2.9",
+            "@types/react-dom": "^19.2.3",
+            "prisma": "^7.3.0",
+            "tailwindcss": "^4.1.18",
+            "@tailwindcss/postcss": "^4.1.18",
             "postcss": "^8.5.3",
-            "eslint": "^9.23.0",
-            "eslint-config-next": "^16.1.1",
-            "@eslint/eslintrc": "^3.3.1",
-            "typescript-eslint": "^8.27.0",
-            "prettier": "^3.5.3",
-            "prettier-plugin-tailwindcss": "^0.7.2",
+            "dotenv": "^16.5.0",
+            "@biomejs/biome": "^1.9.0",
             "vitest": "4.0.17",
             "@vitejs/plugin-react": "5.1.2",
             "@testing-library/react": "^16.3.0",
@@ -178,13 +203,19 @@ const TSCONFIG: &str = r#"{
 }
 "#;
 
-const NEXT_CONFIG: &str = r#"import type { NextConfig } from "next";
+const NEXT_CONFIG: &str = r#"/**
+ * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
+ * for Docker builds.
+ */
+import "./src/env.js";
+import createNextIntlPlugin from "next-intl/plugin";
 
-const nextConfig: NextConfig = {
-  reactStrictMode: true,
-};
+const withNextIntl = createNextIntlPlugin();
 
-export default nextConfig;
+/** @type {import("next").NextConfig} */
+const config = {};
+
+export default withNextIntl(config);
 "#;
 
 const TAILWIND_CONFIG: &str = r#"import type { Config } from "tailwindcss";
@@ -246,25 +277,31 @@ ANTHROPIC_API_KEY=""
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 "#;
 
-const APP_LAYOUT: &str = r#"import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
+const APP_LAYOUT: &str = r#"import "@/styles/globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+import { type Metadata } from "next";
+import { Geist } from "next/font/google";
+import { ThemeProvider } from "./_components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "My App",
-  description: "Built with create-monorepo",
+  description: "Built with t3-mono",
+  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+});
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" className={`${geist.variable}`} suppressHydrationWarning>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }
@@ -283,6 +320,61 @@ const APP_PAGE: &str = r#"export default function Home() {
 "#;
 
 const GLOBALS_CSS: &str = r#"@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 240 5.9% 10%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 240 5.9% 10%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
 "#;
 
 const TRPC_INIT: &str = r#"import { initTRPC, TRPCError } from "@trpc/server";
@@ -389,5 +481,142 @@ import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+"#;
+
+const THEME_PROVIDER: &str = r#""use client";
+
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      {children}
+    </NextThemesProvider>
+  );
+}
+"#;
+
+const PRISMA_CONFIG: &str = r#"import "dotenv/config";
+import { defineConfig } from "prisma/config";
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  migrations: {
+    path: "prisma/migrations",
+  },
+  datasource: {
+    url: process.env["DATABASE_URL"],
+  },
+});
+"#;
+
+const I18N_REQUEST: &str = r#"import { getRequestConfig } from "next-intl/server";
+import { cookies } from "next/headers";
+
+type Messages = Record<string, string>;
+
+export default getRequestConfig(async () => {
+  const cookieStore = cookies();
+  const locale = (await cookieStore).get("locale")?.value ?? "en";
+
+  const messages = (await import(`../../messages/${locale}.json`)) as {
+    default: Messages;
+  };
+
+  return {
+    locale,
+    messages: messages.default,
+  };
+});
+"#;
+
+const DICTIONARY_TYPES: &str = r#"import type de from "../../messages/de.json";
+import type en from "../../messages/en.json";
+
+export const locales = ["de", "en"] as const;
+
+export type AppDictionary = typeof de;
+"#;
+
+const MESSAGES_EN: &str = r#"{}
+"#;
+
+const MESSAGES_DE: &str = r#"{}
+"#;
+
+const BIOME_CONFIG: &str = r#"{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "vcs": {
+    "enabled": true,
+    "useIgnoreFile": true,
+    "clientKind": "git"
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "recommended": true,
+      "source": {
+        "recommended": true,
+        "organizeImports": "on",
+        "useSortedAttributes": "on"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "nursery": {
+        "useSortedClasses": {
+          "level": "warn",
+          "fix": "safe",
+          "options": {
+            "functions": ["clsx", "cva", "cn"]
+          }
+        }
+      }
+    }
+  },
+  "html": {
+    "formatter": {
+      "enabled": true
+    }
+  },
+  "javascript": {
+    "assist": {
+      "enabled": true
+    },
+    "formatter": {
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    }
+  },
+  "css": {
+    "assist": {
+      "enabled": true
+    },
+    "formatter": {
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    },
+    "parser": {
+      "cssModules": true,
+      "tailwindDirectives": true
+    }
+  }
 }
 "#;

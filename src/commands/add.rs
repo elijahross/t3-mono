@@ -28,7 +28,7 @@ pub async fn execute(extension: &str) -> Result<()> {
             println!(
                 "  {} AI agents added to {}",
                 style("✓").green().bold(),
-                style("src/ai/").yellow()
+                style("src/components/ai/").yellow()
             );
         }
         "ui" => {
