@@ -36,7 +36,7 @@ console = "0.15"
 dialoguer = "0.11"
 
 # Template Processing
-handlebars = "5.1"
+handlebars = "6.4"
 
 # Error Handling
 anyhow = "1.0"
