@@ -40,7 +40,7 @@ handlebars = "5.1"
 
 # Error Handling
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Embedded Templates
 rust-embed = "8.2"
