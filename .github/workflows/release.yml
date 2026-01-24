@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build:
@@ -68,10 +69,12 @@ jobs:
         run: |
           mkdir -p npm-pkg
           cp dist/t3-mono npm-pkg/
-          cat > npm-pkg/package.json << 'EOF'
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          cat > npm-pkg/package.json << EOF
           {
             "name": "@t3-mono/${{ matrix.npm_pkg }}",
-            "version": "${{ github.ref_name }}",
+            "version": "${VERSION}",
             "description": "t3-mono binary for ${{ matrix.npm_pkg }}",
             "os": ["${{ contains(matrix.npm_pkg, 'darwin') && 'darwin' || 'linux' }}"],
             "cpu": ["${{ contains(matrix.npm_pkg, 'arm64') && 'arm64' || 'x64' }}"],
@@ -87,9 +90,10 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path npm-pkg
           Copy-Item dist\t3-mono.exe npm-pkg\
+          $version = "${{ github.ref_name }}" -replace '^v', ''
           $json = @{
             name = "@t3-mono/${{ matrix.npm_pkg }}"
-            version = "${{ github.ref_name }}"
+            version = $version
             description = "t3-mono binary for ${{ matrix.npm_pkg }}"
             os = @("win32")
             cpu = @("x64")
@@ -106,6 +110,9 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -120,12 +127,10 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish platform packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
             cd artifacts/$pkg
-            npm publish --access public || true
+            npm publish --access public --provenance || true
             cd ../..
           done
 
@@ -138,11 +143,9 @@ jobs:
           sed -i "s/\"@t3-mono\/.*\": \".*\"/\"@t3-mono\/darwin-arm64\": \"$VERSION\", \"@t3-mono\/darwin-x64\": \"$VERSION\", \"@t3-mono\/linux-x64\": \"$VERSION\", \"@t3-mono\/linux-arm64\": \"$VERSION\", \"@t3-mono\/win32-x64\": \"$VERSION\"/" package.json
 
       - name: Publish main package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd npm
-          npm publish --access public
+          npm publish --access public --provenance
 
   github-release:
     needs: build
