@@ -1,0 +1,68 @@
+name: Check Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 9am UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check for updates
+        id: check
+        run: |
+          echo "## Dependency Update Check" > update-report.md
+          echo "" >> update-report.md
+          echo "Generated: $(date -u)" >> update-report.md
+          echo "" >> update-report.md
+
+          check_pkg() {
+            local pkg=$1
+            local current=$2
+            local latest=$(npm view "$pkg" version 2>/dev/null || echo "error")
+
+            if [ "$latest" != "error" ] && [ "$current" != "$latest" ]; then
+              echo "| $pkg | $current | $latest | ⚠️ Update |" >> update-report.md
+              echo "update_needed=true" >> $GITHUB_OUTPUT
+            else
+              echo "| $pkg | $current | $latest | ✅ |" >> update-report.md
+            fi
+          }
+
+          echo "| Package | Current | Latest | Status |" >> update-report.md
+          echo "|---------|---------|--------|--------|" >> update-report.md
+
+          # Core
+          check_pkg "next" "15.1.0"
+          check_pkg "react" "19.0.0"
+          check_pkg "typescript" "5.7.2"
+          check_pkg "@prisma/client" "6.1.0"
+          check_pkg "better-auth" "1.1.10"
+          check_pkg "@trpc/server" "11.0.0-rc.682"
+          check_pkg "@tanstack/react-query" "5.62.8"
+
+          # AI
+          check_pkg "@langchain/core" "0.3.28"
+          check_pkg "langchain" "0.3.7"
+
+          # Restate
+          check_pkg "@restatedev/restate-sdk" "1.9.1"
+
+          cat update-report.md
+
+      - name: Create issue if updates needed
+        if: steps.check.outputs.update_needed == 'true'
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "📦 Dependency Updates Available"
+          content-filepath: ./update-report.md
+          labels: dependencies, maintenance
