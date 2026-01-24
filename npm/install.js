@@ -54,7 +54,7 @@ function getBinaryPath() {
     return path.join(packageDir, binaryName);
   } catch (e) {
     console.error(`Failed to find binary package: ${packageName}`);
-    console.error("Please report this issue at: https://github.com/elijahross/boilerplate_moduls/issues");
+    console.error("Please report this issue at: https://github.com/elijahross/t3-mono/issues");
     process.exit(1);
   }
 }

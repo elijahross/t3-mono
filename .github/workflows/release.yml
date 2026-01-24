@@ -131,8 +131,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
+            echo "Publishing @t3-mono/$pkg..."
             cd artifacts/$pkg
-            npm publish --access public --provenance || true
+            cat package.json
+            npm publish --access public --provenance || echo "Failed to publish $pkg (may already exist)"
             cd ../..
           done
 
@@ -141,8 +143,17 @@ jobs:
           cd npm
           VERSION=${{ github.ref_name }}
           VERSION=${VERSION#v}
-          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
-          sed -i "s/\"@t3-mono\/.*\": \".*\"/\"@t3-mono\/darwin-arm64\": \"$VERSION\", \"@t3-mono\/darwin-x64\": \"$VERSION\", \"@t3-mono\/linux-x64\": \"$VERSION\", \"@t3-mono\/linux-arm64\": \"$VERSION\", \"@t3-mono\/win32-x64\": \"$VERSION\"/" package.json
+          # Use jq to properly update JSON
+          jq --arg v "$VERSION" '
+            .version = $v |
+            .optionalDependencies = {
+              "@t3-mono/darwin-arm64": $v,
+              "@t3-mono/darwin-x64": $v,
+              "@t3-mono/linux-x64": $v,
+              "@t3-mono/linux-arm64": $v,
+              "@t3-mono/win32-x64": $v
+            }
+          ' package.json > package.json.tmp && mv package.json.tmp package.json
 
       - name: Publish main package
         env:

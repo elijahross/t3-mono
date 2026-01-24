@@ -1,0 +1,8 @@
+{
+  "commands": {
+    "create-package": {
+      "description": "Scaffold cross-platform Rust CLI npm package with GitHub Actions workflow",
+      "file": "commands/create-package.md"
+    }
+  }
+}
