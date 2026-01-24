@@ -127,6 +127,8 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
             cd artifacts/$pkg
@@ -143,6 +145,8 @@ jobs:
           sed -i "s/\"@t3-mono\/.*\": \".*\"/\"@t3-mono\/darwin-arm64\": \"$VERSION\", \"@t3-mono\/darwin-x64\": \"$VERSION\", \"@t3-mono\/linux-x64\": \"$VERSION\", \"@t3-mono\/linux-arm64\": \"$VERSION\", \"@t3-mono\/win32-x64\": \"$VERSION\"/" package.json
 
       - name: Publish main package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd npm
           npm publish --access public --provenance
