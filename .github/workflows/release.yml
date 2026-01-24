@@ -1,0 +1,159 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            npm_pkg: darwin-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            npm_pkg: darwin-x64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            npm_pkg: linux-x64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            npm_pkg: linux-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            npm_pkg: win32-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+        working-directory: t3-mono
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/t3-mono dist/
+          chmod +x dist/t3-mono
+        working-directory: t3-mono
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir dist
+          copy target\${{ matrix.target }}\release\t3-mono.exe dist\
+        working-directory: t3-mono
+
+      - name: Create npm package
+        run: |
+          mkdir -p npm-pkg
+          cp dist/t3-mono* npm-pkg/
+          cat > npm-pkg/package.json << 'EOF'
+          {
+            "name": "@t3-mono/${{ matrix.npm_pkg }}",
+            "version": "${{ github.ref_name }}",
+            "description": "t3-mono binary for ${{ matrix.npm_pkg }}",
+            "os": ["${{ contains(matrix.npm_pkg, 'darwin') && 'darwin' || contains(matrix.npm_pkg, 'linux') && 'linux' || 'win32' }}"],
+            "cpu": ["${{ contains(matrix.npm_pkg, 'arm64') && 'arm64' || 'x64' }}"],
+            "bin": {
+              "t3-mono": "${{ runner.os == 'Windows' && 't3-mono.exe' || 't3-mono' }}"
+            }
+          }
+          EOF
+        working-directory: t3-mono
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.npm_pkg }}
+          path: t3-mono/npm-pkg/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for pkg in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
+            cd artifacts/$pkg
+            npm publish --access public || true
+            cd ../..
+          done
+
+      - name: Update main package version
+        run: |
+          cd t3-mono/npm
+          VERSION=${{ github.ref_name }}
+          VERSION=${VERSION#v}
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+          sed -i "s/\"@t3-mono\/.*\": \".*\"/\"@t3-mono\/darwin-arm64\": \"$VERSION\", \"@t3-mono\/darwin-x64\": \"$VERSION\", \"@t3-mono\/linux-x64\": \"$VERSION\", \"@t3-mono\/linux-arm64\": \"$VERSION\", \"@t3-mono\/win32-x64\": \"$VERSION\"/" package.json
+
+      - name: Publish main package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd t3-mono/npm
+          npm publish --access public
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Package binaries
+        run: |
+          for pkg in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
+            cd artifacts/$pkg
+            if [ -f t3-mono.exe ]; then
+              zip -r ../../t3-mono-$pkg.zip t3-mono.exe
+            else
+              tar -czvf ../../t3-mono-$pkg.tar.gz t3-mono
+            fi
+            cd ../..
+          done
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            t3-mono-*.tar.gz
+            t3-mono-*.zip
+          generate_release_notes: true

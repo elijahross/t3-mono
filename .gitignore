@@ -1,0 +1,31 @@
+# Build artifacts
+/target/
+/dist/
+
+# Dependencies
+/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rust
+Cargo.lock
+**/*.rs.bk
+
+# npm publishing artifacts
+/packages/
+*.tgz
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local

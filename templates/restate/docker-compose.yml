@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Restate orchestrator
+  restate:
+    image: restatedev/restate:latest
+    container_name: restate_dev
+    ports:
+      - "8080:8080"   # Ingress endpoint
+      - "9070:9070"   # Admin API & UI
+      - "9071:9071"   # Metrics
+    environment:
+      - RESTATE_OBSERVABILITY__LOG_LEVEL=info
+    networks:
+      - restate-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9070/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Reusable services (Embedding, Extraction, AWS S3, AWS Lambda)
+  services:
+    build:
+      context: ./services
+      dockerfile: Dockerfile
+    container_name: restate_services
+    ports:
+      - "9082:9082"
+    environment:
+      - PORT=9082
+      - OLLAMA_ENDPOINT=http://ollama:11434
+      - DOCLING_ENDPOINT=http://docling:5000
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MAX_RETRIES=5
+    networks:
+      - restate-network
+    depends_on:
+      - restate
+      - ollama
+      - docling
+    restart: unless-stopped
+
+  # Ollama for embeddings
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - restate-network
+    restart: unless-stopped
+
+  # Docling for document extraction
+  docling:
+    image: docling/docling-serve:latest
+    container_name: docling
+    ports:
+      - "5000:5000"
+    networks:
+      - restate-network
+    restart: unless-stopped
+
+  # PostgreSQL with pgvector (optional, for storing embeddings)
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=restate
+      - POSTGRES_PASSWORD=restate
+      - POSTGRES_DB=restate
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - restate-network
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  postgres_data:
+
+networks:
+  restate-network:
+    driver: bridge

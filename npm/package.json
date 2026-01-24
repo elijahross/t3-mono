@@ -1,0 +1,48 @@
+{
+  "name": "t3-mono",
+  "version": "0.1.0",
+  "description": "CLI to scaffold T3 stack apps with Better Auth and optional AI/UI/Restate extensions",
+  "author": "Elijah Ross",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elijahross/boilerplate_moduls.git"
+  },
+  "bugs": {
+    "url": "https://github.com/elijahross/boilerplate_moduls/issues"
+  },
+  "homepage": "https://github.com/elijahross/boilerplate_moduls#readme",
+  "keywords": [
+    "cli",
+    "monorepo",
+    "t3-stack",
+    "next.js",
+    "better-auth",
+    "scaffolding",
+    "langchain",
+    "ai",
+    "ui-components",
+    "restate",
+    "durable-workflows"
+  ],
+  "bin": {
+    "t3-mono": "bin/index.js"
+  },
+  "files": [
+    "bin",
+    "install.js"
+  ],
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "optionalDependencies": {
+    "@t3-mono/darwin-arm64": "0.1.0",
+    "@t3-mono/darwin-x64": "0.1.0",
+    "@t3-mono/linux-x64": "0.1.0",
+    "@t3-mono/linux-arm64": "0.1.0",
+    "@t3-mono/win32-x64": "0.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

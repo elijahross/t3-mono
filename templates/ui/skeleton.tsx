@@ -1,0 +1,17 @@
+/**
+ * Skeleton component - Pure tailwind
+ * No external dependencies required
+ */
+import { cn } from "@/utils/utils"
+
+function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="skeleton"
+      className={cn("bg-muted rounded-md animate-pulse", className)}
+      {...props}
+    />
+  )
+}
+
+export { Skeleton }
