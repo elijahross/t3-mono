@@ -15,41 +15,41 @@ path = "src/main.rs"
 
 [dependencies]
 # CLI Framework
-clap = { version = "4.4", features = ["derive", "color", "suggestions"] }
+clap = { version = "4.5.54", features = ["derive", "color", "suggestions"] }
 
 # Async Runtime
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "1.49.0", features = ["full"] }
 
 # HTTP Client
-reqwest = { version = "0.11", features = ["json", "stream"] }
+reqwest = { version = "0.13.1", features = ["json", "stream"] }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
 
 # Git Operations
-git2 = "0.18"
+git2 = "0.20.3"
 
 # Terminal UI
-indicatif = "0.17"
-console = "0.15"
-dialoguer = "0.11"
+indicatif = "0.18.3"
+console = "0.16.2"
+dialoguer = "0.12.0"
 
 # Template Processing
-handlebars = "5.1"
+handlebars = "6.4.0"
 
 # Error Handling
-anyhow = "1.0"
-thiserror = "1.0"
+anyhow = "1.0.100"
+thiserror = "2.0.18"
 
 # Embedded Templates
-rust-embed = "8.2"
+rust-embed = "8.11.0"
 
 # Cross-platform Paths
-dirs = "5.0"
+dirs = "6.0.0"
 
 # Futures for async operations
-futures = "0.3"
+futures = "0.3.31"
 
 [profile.release]
 opt-level = "z"
