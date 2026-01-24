@@ -6,12 +6,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/elijahross/boilerplate_moduls.git"
+    "url": "git+https://github.com/elijahross/t3-mono.git"
   },
   "bugs": {
-    "url": "https://github.com/elijahross/boilerplate_moduls/issues"
+    "url": "https://github.com/elijahross/t3-mono/issues"
   },
-  "homepage": "https://github.com/elijahross/boilerplate_moduls#readme",
+  "homepage": "https://github.com/elijahross/t3-mono#readme",
   "keywords": [
     "cli",
     "monorepo",

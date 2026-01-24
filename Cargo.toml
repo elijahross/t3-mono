@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Elijah Ross"]
 description = "CLI tool to scaffold T3 stack apps with Better Auth and optional AI/UI/Restate extensions"
 license = "MIT"
-repository = "https://github.com/elijahross/boilerplate_moduls"
+repository = "https://github.com/elijahross/t3-mono"
 keywords = ["cli", "monorepo", "t3-stack", "scaffolding", "next.js", "restate"]
 categories = ["command-line-utilities", "development-tools"]
 
