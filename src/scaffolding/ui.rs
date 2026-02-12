@@ -21,6 +21,11 @@ pub async fn scaffold(project_path: &str) -> Result<()> {
     // Create component index file
     write_file(project_path, "src/components/ui/index.ts", UI_INDEX)?;
 
+    // Create utils directory with hooks (only included with UI)
+    let utils_path = project.join("src/utils");
+    tokio::fs::create_dir_all(&utils_path).await?;
+    write_file(project_path, "src/utils/use-mobile.ts", USE_MOBILE_HOOK)?;
+
     Ok(())
 }
 
@@ -77,6 +82,27 @@ export * from "./textarea";
 export * from "./toggle";
 export * from "./toggle-group";
 export * from "./tooltip";
+"#;
+
+const USE_MOBILE_HOOK: &str = r#"import * as React from "react"
+
+const MOBILE_BREAKPOINT = 768
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
+}
 "#;
 
 const GLOBALS_CSS_THEMED: &str = r#"@import "tailwindcss";
