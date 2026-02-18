@@ -34,8 +34,11 @@ Examples:
   # With Restate durable workflows
   npx t3-mono my-app --restate
 
+  # With CommandIsland AI layer
+  npx t3-mono my-app --cmd
+
   # With all extensions
-  npx t3-mono my-app --ai --ui --restate
+  npx t3-mono my-app --ai --ui --restate --cmd
 
   # Interactive mode (prompts for auth and extensions)
   npx t3-mono my-app -i
@@ -44,6 +47,7 @@ Examples:
   npx t3-mono add ai
   npx t3-mono add ui
   npx t3-mono add restate
+  npx t3-mono add cmd
 "#)]
 pub struct Args {
     /// Name of the project to create
@@ -61,6 +65,10 @@ pub struct Args {
     /// Include Restate durable workflow services
     #[arg(long, short = 'r')]
     pub restate: bool,
+
+    /// Include CommandIsland AI layer (chat, tables, docs, split-view)
+    #[arg(long, short = 'c')]
+    pub cmd: bool,
 
     /// Run in interactive mode with prompts
     #[arg(long, short = 'i')]
@@ -82,8 +90,8 @@ pub struct Args {
 pub enum Command {
     /// Add an extension to an existing project
     Add {
-        /// Extension to add: 'ai', 'ui', or 'restate'
-        #[arg(value_parser = ["ai", "ui", "restate"])]
+        /// Extension to add: 'ai', 'ui', 'restate', or 'cmd'
+        #[arg(value_parser = ["ai", "ui", "restate", "cmd"])]
         extension: String,
     },
 }

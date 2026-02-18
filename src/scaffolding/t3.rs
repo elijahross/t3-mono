@@ -75,6 +75,7 @@ pub fn finalize_package_json(
     project_path: &str,
     include_ai: bool,
     include_ui: bool,
+    include_cmd: bool,
     auth_provider: AuthProvider,
 ) -> Result<()> {
     let mut pkg = serde_json::json!({
@@ -96,42 +97,43 @@ pub fn finalize_package_json(
             "test": "vitest"
         },
         "dependencies": {
-            "next": "^16.1.4",
-            "react": "^19.2.3",
-            "react-dom": "^19.2.3",
-            "@prisma/client": "^7.3.0",
-            "@prisma/adapter-pg": "^7.3.0",
-            "@trpc/client": "^11.8.1",
-            "@trpc/server": "^11.8.1",
-            "@trpc/react-query": "^11.8.1",
-            "@tanstack/react-query": "^5.90.20",
+            "next": "^16.1.6",
+            "react": "^19.2.4",
+            "react-dom": "^19.2.4",
+            "@prisma/client": "^7.4.0",
+            "@prisma/adapter-pg": "^7.4.0",
+            "@swc/helpers": "^0.5.18",
+            "@trpc/client": "^11.10.0",
+            "@trpc/server": "^11.10.0",
+            "@trpc/react-query": "^11.10.0",
+            "@tanstack/react-query": "^5.90.21",
             "@t3-oss/env-nextjs": "^0.13.10",
             "next-themes": "^0.4.6",
-            "next-intl": "^4.7.0",
-            "superjson": "^2.2.1",
+            "next-intl": "^4.8.3",
+            "superjson": "^2.2.6",
             "zod": "^4.3.6",
             "server-only": "^0.0.1",
-            "lucide-react": "^0.563.0",
+            "lucide-react": "^0.574.0",
             "clsx": "^2.1.1",
-            "tailwind-merge": "^3.4.0"
+            "tailwind-merge": "^3.4.1"
         },
         "devDependencies": {
             "typescript": "^5.9.3",
-            "@types/node": "^25.0.10",
-            "@types/react": "^19.2.9",
+            "@types/node": "^25.2.3",
+            "@types/react": "^19.2.14",
             "@types/react-dom": "^19.2.3",
-            "prisma": "^7.3.0",
-            "tailwindcss": "^4.1.18",
-            "@tailwindcss/postcss": "^4.1.18",
-            "postcss": "^8.5.3",
-            "dotenv": "^16.5.0",
-            "@biomejs/biome": "^1.9.0",
-            "vitest": "4.0.17",
-            "@vitejs/plugin-react": "5.1.2",
-            "@testing-library/react": "^16.3.0",
-            "@testing-library/dom": "^10.4.0",
-            "@testing-library/jest-dom": "^6.6.3",
-            "jsdom": "27.4.0"
+            "prisma": "^7.4.0",
+            "tailwindcss": "^4.2.0",
+            "@tailwindcss/postcss": "^4.2.0",
+            "postcss": "^8.5.6",
+            "dotenv": "^17.3.1",
+            "@biomejs/biome": "^2.4.2",
+            "vitest": "4.0.18",
+            "@vitejs/plugin-react": "5.1.4",
+            "@testing-library/react": "^16.3.2",
+            "@testing-library/dom": "^10.4.1",
+            "@testing-library/jest-dom": "^6.9.1",
+            "jsdom": "28.1.0"
         }
     });
 
@@ -139,7 +141,7 @@ pub fn finalize_package_json(
     let deps = pkg["dependencies"].as_object_mut().unwrap();
     match auth_provider {
         AuthProvider::BetterAuth => {
-            deps.insert("better-auth".to_string(), serde_json::json!("^1.0.0"));
+            deps.insert("better-auth".to_string(), serde_json::json!("^1.4.18"));
         }
         AuthProvider::NextAuth => {
             deps.insert("next-auth".to_string(), serde_json::json!("4.24.13"));
@@ -150,38 +152,81 @@ pub fn finalize_package_json(
     // Add AI dependencies if enabled
     if include_ai {
         let deps = pkg["dependencies"].as_object_mut().unwrap();
-        deps.insert("@langchain/anthropic".to_string(), serde_json::json!("^1.3.12"));
-        deps.insert("@langchain/core".to_string(), serde_json::json!("^1.1.17"));
-        deps.insert("@langchain/openai".to_string(), serde_json::json!("^1.2.3"));
-        deps.insert("langchain".to_string(), serde_json::json!("^0.3.20"));
-        deps.insert("winston".to_string(), serde_json::json!("^3.17.0"));
-        deps.insert("pg".to_string(), serde_json::json!("^8.16.0"));
+        deps.insert("@langchain/anthropic".to_string(), serde_json::json!("^1.3.18"));
+        deps.insert("@langchain/core".to_string(), serde_json::json!("^1.1.26"));
+        deps.insert("@langchain/openai".to_string(), serde_json::json!("^1.2.8"));
+        deps.insert("langchain".to_string(), serde_json::json!("^1.2.25"));
+        deps.insert("winston".to_string(), serde_json::json!("^3.19.0"));
+        deps.insert("pg".to_string(), serde_json::json!("^8.18.0"));
     }
 
     // Add UI dependencies if enabled
     if include_ui {
         let deps = pkg["dependencies"].as_object_mut().unwrap();
-        deps.insert("@floating-ui/react".to_string(), serde_json::json!("^0.27.16"));
+        deps.insert("@floating-ui/react".to_string(), serde_json::json!("^0.27.18"));
         deps.insert("class-variance-authority".to_string(), serde_json::json!("^0.7.1"));
         deps.insert("clsx".to_string(), serde_json::json!("^2.1.1"));
         deps.insert("date-fns".to_string(), serde_json::json!("^4.1.0"));
-        deps.insert("lucide-react".to_string(), serde_json::json!("^0.562.0"));
-        deps.insert("react-day-picker".to_string(), serde_json::json!("^9.13.0"));
+        deps.insert("lucide-react".to_string(), serde_json::json!("^0.574.0"));
+        deps.insert("react-day-picker".to_string(), serde_json::json!("^9.13.2"));
         deps.insert("recharts".to_string(), serde_json::json!("^2.15.4"));
         deps.insert("sonner".to_string(), serde_json::json!("^2.0.7"));
-        deps.insert("tailwind-merge".to_string(), serde_json::json!("^3.4.0"));
+        deps.insert("tailwind-merge".to_string(), serde_json::json!("^3.4.1"));
         deps.insert("next-themes".to_string(), serde_json::json!("^0.4.6"));
+    }
+
+    // Add CommandIsland dependencies if enabled
+    if include_cmd {
+        let deps = pkg["dependencies"].as_object_mut().unwrap();
+        // LangChain
+        deps.insert("@langchain/anthropic".to_string(), serde_json::json!("^1.3.18"));
+        deps.insert("@langchain/cohere".to_string(), serde_json::json!("^1.0.2"));
+        deps.insert("@langchain/core".to_string(), serde_json::json!("^1.1.26"));
+        deps.insert("@langchain/google-genai".to_string(), serde_json::json!("^2.1.19"));
+        deps.insert("@langchain/mistralai".to_string(), serde_json::json!("^1.0.4"));
+        deps.insert("@langchain/ollama".to_string(), serde_json::json!("^1.2.3"));
+        deps.insert("@langchain/openai".to_string(), serde_json::json!("^1.2.8"));
+        deps.insert("@langchain/textsplitters".to_string(), serde_json::json!("^1.0.1"));
+        deps.insert("langchain".to_string(), serde_json::json!("^1.2.25"));
+        // Backend
+        deps.insert("winston".to_string(), serde_json::json!("^3.19.0"));
+        deps.insert("pg".to_string(), serde_json::json!("^8.18.0"));
+        deps.insert("server-only".to_string(), serde_json::json!("^0.0.1"));
+        // Frontend
+        deps.insert("react-markdown".to_string(), serde_json::json!("^10.1.0"));
+        deps.insert("remark-gfm".to_string(), serde_json::json!("^4.0.1"));
+        deps.insert("@floating-ui/react".to_string(), serde_json::json!("^0.27.18"));
+        deps.insert("sonner".to_string(), serde_json::json!("^2.0.7"));
+        deps.insert("class-variance-authority".to_string(), serde_json::json!("^0.7.1"));
+        deps.insert("date-fns".to_string(), serde_json::json!("^4.1.0"));
+        // DocGen
+        deps.insert("pdfmake".to_string(), serde_json::json!("^0.3.4"));
+        deps.insert("exceljs".to_string(), serde_json::json!("^4.4.0"));
+        deps.insert("pptxgenjs".to_string(), serde_json::json!("^4.0.1"));
+        // AWS
+        deps.insert("@aws-sdk/client-s3".to_string(), serde_json::json!("^3.993.0"));
+        deps.insert("@aws-sdk/s3-request-presigner".to_string(), serde_json::json!("^3.993.0"));
+
+        // Dev dependencies
+        let dev_deps = pkg["devDependencies"].as_object_mut().unwrap();
+        dev_deps.insert("@types/pdfmake".to_string(), serde_json::json!("^0.3.1"));
+        dev_deps.insert("@types/pg".to_string(), serde_json::json!("^8.16.0"));
     }
 
     let content = serde_json::to_string_pretty(&pkg)?;
     write_file(project_path, "package.json", &content)?;
 
     // Write .env.example with auth-specific variables
-    let env_content = match auth_provider {
-        AuthProvider::BetterAuth => ENV_EXAMPLE_BETTER_AUTH,
-        AuthProvider::NextAuth => ENV_EXAMPLE_NEXT_AUTH,
+    let mut env_content = match auth_provider {
+        AuthProvider::BetterAuth => ENV_EXAMPLE_BETTER_AUTH.to_string(),
+        AuthProvider::NextAuth => ENV_EXAMPLE_NEXT_AUTH.to_string(),
     };
-    write_file(project_path, ".env.example", env_content)?;
+
+    if include_cmd {
+        env_content.push_str(ENV_EXAMPLE_CMD);
+    }
+
+    write_file(project_path, ".env.example", &env_content)?;
 
     Ok(())
 }
@@ -287,6 +332,26 @@ ANTHROPIC_API_KEY=""
 
 # App
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+"#;
+
+const ENV_EXAMPLE_CMD: &str = r#"
+# CommandIsland AI Layer
+ANTHROPIC_API_KEY=""
+# OPENAI_API_KEY=""
+# GOOGLE_GENAI_API_KEY=""
+# MISTRAL_API_KEY=""
+# COHERE_API_KEY=""
+# OLLAMA_BASE_URL="http://localhost:11434"
+
+# S3 / Object Storage (for file attachments)
+AWS_REGION="eu-central-1"
+AWS_S3_BUCKET_NAME=""
+AWS_ACCESS_KEY_ID=""
+AWS_SECRET_ACCESS_KEY=""
+
+# Document Processing (optional)
+# DOCLING_API_URL="http://localhost:5001"
+# DOCLING_API_KEY=""
 "#;
 
 const APP_LAYOUT: &str = r#"import "@/styles/globals.css";

@@ -32,6 +32,7 @@ async fn run(args: Args) -> Result<()> {
                 args.ai,
                 args.ui,
                 args.restate,
+                args.cmd,
                 args.interactive,
                 !args.no_git,
                 args.auth,

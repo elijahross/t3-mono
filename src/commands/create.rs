@@ -6,7 +6,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::cli::AuthProvider;
-use crate::scaffolding::{ai, better_auth, next_auth, restate, t3, ui};
+use crate::scaffolding::{ai, better_auth, cmd, next_auth, restate, t3, ui};
 use crate::utils::fs;
 
 pub async fn execute(
@@ -14,16 +14,17 @@ pub async fn execute(
     include_ai: bool,
     include_ui: bool,
     include_restate: bool,
+    include_cmd: bool,
     interactive: bool,
     init_git: bool,
     auth_provider: AuthProvider,
 ) -> Result<()> {
-    let (selected_auth, ai_enabled, ui_enabled, restate_enabled) = if interactive {
+    let (selected_auth, ai_enabled, ui_enabled, restate_enabled, cmd_enabled) = if interactive {
         let auth = prompt_auth_provider(auth_provider)?;
-        let (ai, ui, restate) = prompt_extensions(include_ai, include_ui, include_restate)?;
-        (auth, ai, ui, restate)
+        let (ai, ui, restate, cmd) = prompt_extensions(include_ai, include_ui, include_restate, include_cmd)?;
+        (auth, ai, ui, restate, cmd)
     } else {
-        (auth_provider, include_ai, include_ui, include_restate)
+        (auth_provider, include_ai, include_ui, include_restate, include_cmd)
     };
 
     let project_path = Path::new(name);
@@ -57,6 +58,9 @@ pub async fn execute(
     }
     if restate_enabled {
         println!("  {} Restate durable workflows", style("+").green().bold());
+    }
+    if cmd_enabled {
+        println!("  {} CommandIsland AI layer", style("+").green().bold());
     }
     println!();
 
@@ -107,6 +111,13 @@ pub async fn execute(
         pb.inc(1);
     }
 
+    // Step 6b: Add CommandIsland if enabled
+    if cmd_enabled {
+        pb.set_message("Adding CommandIsland AI layer...");
+        cmd::scaffold(name).await?;
+        pb.inc(1);
+    }
+
     // Step 7: Initialize git
     if init_git {
         pb.set_message("Initializing git repository...");
@@ -116,13 +127,13 @@ pub async fn execute(
 
     // Step 8: Final package.json assembly
     pb.set_message("Finalizing package.json...");
-    t3::finalize_package_json(name, ai_enabled, ui_enabled, selected_auth)?;
+    t3::finalize_package_json(name, ai_enabled, ui_enabled, cmd_enabled, selected_auth)?;
     pb.inc(1);
 
     pb.finish_and_clear();
 
     // Print success message
-    print_success(name, ai_enabled, ui_enabled, restate_enabled);
+    print_success(name, ai_enabled, ui_enabled, restate_enabled, cmd_enabled);
 
     Ok(())
 }
@@ -151,9 +162,9 @@ fn prompt_auth_provider(default: AuthProvider) -> Result<AuthProvider> {
     })
 }
 
-fn prompt_extensions(default_ai: bool, default_ui: bool, default_restate: bool) -> Result<(bool, bool, bool)> {
-    let extensions = vec!["AI Agents (LangChain)", "UI Components", "Restate Workflows"];
-    let defaults = vec![default_ai, default_ui, default_restate];
+fn prompt_extensions(default_ai: bool, default_ui: bool, default_restate: bool, default_cmd: bool) -> Result<(bool, bool, bool, bool)> {
+    let extensions = vec!["AI Agents (LangChain)", "UI Components", "Restate Workflows", "CommandIsland AI Layer"];
+    let defaults = vec![default_ai, default_ui, default_restate, default_cmd];
 
     let selections = MultiSelect::new()
         .with_prompt("Select extensions to include")
@@ -164,8 +175,9 @@ fn prompt_extensions(default_ai: bool, default_ui: bool, default_restate: bool) 
     let ai = selections.contains(&0);
     let ui = selections.contains(&1);
     let restate = selections.contains(&2);
+    let cmd = selections.contains(&3);
 
-    Ok((ai, ui, restate))
+    Ok((ai, ui, restate, cmd))
 }
 
 fn create_progress_bar() -> ProgressBar {
@@ -180,7 +192,7 @@ fn create_progress_bar() -> ProgressBar {
     pb
 }
 
-fn print_success(name: &str, ai_enabled: bool, ui_enabled: bool, restate_enabled: bool) {
+fn print_success(name: &str, ai_enabled: bool, ui_enabled: bool, restate_enabled: bool, cmd_enabled: bool) {
     println!();
     println!("  {} Project created successfully!", style("✓").green().bold());
     println!();
@@ -202,7 +214,7 @@ fn print_success(name: &str, ai_enabled: bool, ui_enabled: bool, restate_enabled
     }
     println!();
 
-    if ai_enabled || ui_enabled || restate_enabled {
+    if ai_enabled || ui_enabled || restate_enabled || cmd_enabled {
         println!("  Included extensions:");
         if ai_enabled {
             println!("    {} AI agents in {}", style("•").dim(), style("src/components/ai/").yellow());
@@ -212,6 +224,11 @@ fn print_success(name: &str, ai_enabled: bool, ui_enabled: bool, restate_enabled
         }
         if restate_enabled {
             println!("    {} Restate workflows in {}", style("•").dim(), style("restate/").yellow());
+        }
+        if cmd_enabled {
+            println!("    {} CommandIsland AI layer in {}", style("•").dim(), style("src/components/{chat,tables,docs,layout}/").yellow());
+            println!("    {} tRPC routers in {}", style("•").dim(), style("src/server/api/routers/{chat,tables,docs}.ts").yellow());
+            println!("    {} Claude skill in {}", style("•").dim(), style(".claude/skills/commandisland.md").yellow());
         }
         println!();
     }
